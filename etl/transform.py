@@ -28,6 +28,93 @@ def translate_country_names(country_codes, translations, target_lang):
     return translated_names
 
 
+def transformProduct(args) -> pd.DataFrame:
+    producto, subcategoriaProducto, modeloProducto = args
+    # Renombrar columnas
+    subcategoriaProducto.rename(columns={"ProductSubcategoryID": "ProductAlternatekey"}, inplace=True)
+    subcategoriaProducto.drop(columns=['rowguid', 'ModifiedDate', 'Name'], inplace=True)
+
+    producto.rename(columns={"Name": "EnglishProductName"}, inplace=True)
+    producto.rename(columns={"SellStartDate": "StartDate"}, inplace=True)
+    producto.rename(columns={"SellEndDate": "EndDate"}, inplace=True)
+
+    producto.sort_values(by='ProductModelID', inplace=True)
+    modeloProducto.sort_values(by='ProductModelID', inplace=True)
+
+    producto = producto.merge(modeloProducto, left_on='ProductModelID', right_on='ProductModelID', how='right')
+
+    # Ordenar el DataFrame por la columna CurrencyAlternateKey
+    producto.sort_values(by='ProductSubcategoryID', inplace=True)
+    subcategoriaProducto.sort_values(by='ProductAlternatekey', inplace=True)
+
+    dimProduct = producto.merge(subcategoriaProducto, left_on='ProductSubcategoryID', right_on='ProductAlternatekey',
+                                how='right')
+    dimProduct.drop(columns=['ProductCategoryID'], inplace=True)
+    dimProduct.drop(columns=['ProductAlternatekey'], inplace=True)
+    dimProduct.drop(columns=['ProductModelID'], inplace=True)
+
+    dimProduct.rename(columns={"ProductID": "ProductKey"}, inplace=True)
+    dimProduct.rename(columns={"ProductNumber": "ProductAlternativeKey"}, inplace=True)
+    dimProduct.rename(columns={"ProductSubcategoryID": "ProductSubcategoryKey"}, inplace=True)
+    dimProduct.rename(columns={"Name": "ModelName"}, inplace=True)
+
+    desired_column_order = [
+        'ProductKey', 'ProductAlternativeKey', 'ProductSubcategoryKey', 'WeightUnitMeasureCode',
+        'EnglishProductName', 'StandardCost', 'FinishedGoodsFlag', 'Color', 'SafetyStockLevel', 'ReorderPoint',
+        'ListPrice', 'Size', 'Weight', 'DaysToManufacture', 'ProductLine', 'Class', 'Style',
+        'ModelName', 'StartDate', 'EndDate'
+    ]
+
+    # Verificar que todas las columnas deseadas están
+    for column in desired_column_order:
+        if column not in dimProduct.columns:
+            print(f"Warning: Column '{column}' not found in dimSalesTerritory. It will be skipped in reordering.")
+
+    # Reorganizar las columnas
+    dimProduct = dimProduct[[col for col in desired_column_order if col in dimProduct.columns]]
+
+    return dimProduct
+
+
+def transformPromotion(args) -> pd.DataFrame:
+    promotion = args
+    # renombrar
+    promotion.rename(columns={"SpecialOfferID": "PromotionKey"}, inplace=True)
+    promotion.rename(columns={"Description": "EnglishPromotionName"}, inplace=True)
+    promotion.rename(columns={"Type": "EnglishPromotionType"}, inplace=True)
+    promotion.rename(columns={"Category": "EnglishPromotionCategory"}, inplace=True)
+
+    # borrar
+    promotion.drop(columns=['rowguid'], inplace=True)
+    promotion.drop(columns=['ModifiedDate'], inplace=True)
+
+    dimPromotion = promotion
+
+    return dimPromotion
+
+def transformSubCategory(args) -> pd.DataFrame:
+    subcategoriaProducto = args
+
+    subcategoriaProducto.drop(columns=['rowguid', 'ModifiedDate'], inplace=True)
+    subcategoriaProducto.rename(columns={" ProductSubcategoryID": "ProductSubcategoryKey"}, inplace=True)
+    subcategoriaProducto.rename(columns={" ProductCategoryID": "ProductCategoryKey"}, inplace=True)
+
+    subcategoriaProducto.rename(columns={" Name": "EnglishProductSubcategoryName"}, inplace=True)
+    desired_column_order = [
+        'ProductSubcategoryID', 'Name', 'ProductCategoryID'
+    ]
+
+    # Verificar que todas las columnas deseadas están
+    for column in desired_column_order:
+        if column not in subcategoriaProducto.columns:
+            print(f"Warning: Column '{column}' not found in dimSalesTerritory. It will be skipped in reordering.")
+
+    # Reorganizar las columnas
+    dimProductSubcategory = subcategoriaProducto[
+        [col for col in desired_column_order if col in subcategoriaProducto.columns]]
+
+    return dimProductSubcategory
+
 def transformCurrency(dimCurrency: DataFrame) -> DataFrame:
     # Renombrar columnas
     dimCurrency.rename(columns={'CurrencyCode': 'CurrencyAlternateKey'}, inplace=True)
@@ -299,82 +386,3 @@ def transformReseller(args) -> DataFrame:
 
     return dimReseller
 
-def transformProduct( args) -> pd.DataFrame:
-
-    producto, subcategoriaProducto,modeloProducto = args
-    # Renombrar columnas
-    subcategoriaProducto.rename(columns={"ProductSubcategoryID": "ProductAlternatekey"}, inplace=True)
-    subcategoriaProducto.drop(columns=['rowguid', 'ModifiedDate','Name'], inplace=True)
-
-
-    producto.rename(columns={"Name": "EnglishProductName"}, inplace=True)
-    producto.rename(columns={"SellStartDate": "StartDate"}, inplace=True)
-    producto.rename(columns={"SellEndDate": "EndDate"}, inplace=True)
-
-
-    producto.sort_values(by='ProductModelID', inplace=True)
-    modeloProducto.sort_values(by='ProductModelID', inplace=True)
-
-    producto = producto.merge(modeloProducto, left_on='ProductModelID', right_on='ProductModelID', how='right')
-
-    # Ordenar el DataFrame por la columna CurrencyAlternateKey
-    producto.sort_values(by='ProductSubcategoryID', inplace=True)
-    subcategoriaProducto.sort_values(by='ProductAlternatekey', inplace=True)
-
-    dimProduct = producto.merge(subcategoriaProducto, left_on='ProductSubcategoryID', right_on='ProductAlternatekey', how='right')
-    dimProduct.drop(columns=['ProductCategoryID'], inplace=True)
-    dimProduct.drop(columns=['ProductAlternatekey'], inplace=True)
-    dimProduct.drop(columns=['ProductModelID'], inplace=True)
-
-
-    dimProduct.rename(columns={"ProductID": "ProductKey"}, inplace=True)
-    dimProduct.rename(columns={"ProductNumber": "ProductAlternativeKey"}, inplace=True)
-    dimProduct.rename(columns={"ProductSubcategoryID": "ProductSubcategoryKey"}, inplace=True)
-    dimProduct.rename(columns={"Name": "ModelName"}, inplace=True)
-
-
-    desired_column_order = [
-            'ProductKey', 'ProductAlternativeKey', 'ProductSubcategoryKey', 'WeightUnitMeasureCode', 'SizeUnitMeasureCode', 'EnglishProductName', 'StandardCost', 'FinishedGoodsFlag', 'Color', 'SafetyStockLevel', 'ReorderPoint', 'ListPrice','Size', 'Weight','SizeUnitMeasureCode', 'DaysToManufacture','ProductLine','Class', 'Style', 'ModelName', 'StartDate', 'EndDate'
-    ]
-
-    # Verificar que todas las columnas deseadas están
-    for column in desired_column_order:
-        if column not in dimProduct.columns:
-            print(f"Warning: Column '{column}' not found in dimSalesTerritory. It will be skipped in reordering.")
-
-    # Reorganizar las columnas
-    dimProduct = dimProduct[[col for col in desired_column_order if col in dimProduct.columns]]
-
-    return dimProduct
-
-def transformPromotion(args ) -> pd.DataFrame:
-    promotion=args
-    promotion.rename(columns={"SpecialOfferID": "PromotionKey"}, inplace=True)
-    promotion.rename(columns={"Description": "EnglishPromotionName"}, inplace=True)
-    promotion.rename(columns={"Type": "EnglishPromotionType"}, inplace=True)
-    promotion.rename(columns={"Category": "EnglishPromotionCategory"}, inplace=True)
-
-    promotion.drop(columns=['rowguid'], inplace=True)
-    promotion.drop(columns=['ModifiedDate'], inplace=True)
-
-def transformSubCategory(args ) -> pd.DataFrame:
-    subcategoriaProducto=args
-
-    subcategoriaProducto.drop(columns=['rowguid','ModifiedDate'], inplace=True)
-    subcategoriaProducto.rename(columns={" ProductSubcategoryID": "ProductSubcategoryKey"}, inplace=True)
-    subcategoriaProducto.rename(columns={" ProductCategoryID": "ProductCategoryKey"}, inplace=True)
-
-    subcategoriaProducto.rename(columns={" Name": "EnglishProductSubcategoryName"}, inplace=True)
-    desired_column_order = [
-        'ProductSubcategoryID', 'Name', 'ProductCategoryID'
-    ]
-
-    # Verificar que todas las columnas deseadas están
-    for column in desired_column_order:
-        if column not in subcategoriaProducto.columns:
-            print(f"Warning: Column '{column}' not found in dimSalesTerritory. It will be skipped in reordering.")
-
-    # Reorganizar las columnas
-    dimProductSubcategory = subcategoriaProducto[[col for col in desired_column_order if col in subcategoriaProducto.columns]]
-
-    return dimProductSubcategory

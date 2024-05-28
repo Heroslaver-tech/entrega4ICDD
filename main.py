@@ -19,27 +19,27 @@ url_wh = (f"{config_wh['drivername']}://{config_wh['user']}:{config_wh['password
 
 # Create the SQLAlchemy Engine
 db_aw = create_engine(url_db)
-
 wh_aw = create_engine(url_wh)
 
-# Crear dos inspectores, uno para cada base de datos
-inspector_db_aw = inspect(db_aw)
-inspector_wh_aw = inspect(wh_aw)
 
-tnames = inspector_wh_aw.get_table_names()
+#dimProduct
+dimProduct = extract.extractProduct(db_aw)
+dimProduct = transform.transformProduct(dimProduct)
+load.load_data_product(dimProduct, wh_aw)
+
+#dimPromotion
+dimPromotion = extract.extractPromotion(db_aw)
+dimPromotion = transform.transformPromotion(dimPromotion)
+load.load_data_promotion(dimPromotion, wh_aw)
+
+#dimProductSubcategory
+dimProductSubcategory = extract.extractSubcategory(db_aw)
+dimProductSubcategory = transform.transformSubCategory(dimProductSubcategory)
+load.load_data_subcategory(dimProductSubcategory, wh_aw)
 
 
-# extract
-# dimPromotion = extract.extractPromotion(db_aw)
-# dimProduct = extract.extractProduct(db_aw)
-# dimSupplier = extract.extractSupplier(db_aw)
-# dimEmployee = extract.extractEmployee(db_aw)
-#
 
-#dimReseller
-dimReseller = extract.extractReseller(db_aw, wh_aw)
-dimReseller = transform.transformReseller(dimReseller)
-load.load_data_reseller(dimReseller,wh_aw)
+# dimEmployee
 
 #dimCurrency
 dimCurrency = extract.extractCurrency(db_aw)
@@ -65,6 +65,10 @@ dimCustomer = extract.extractCustomer(db_aw, wh_aw)
 dimCustomer = transform.transformCustomer(dimCustomer)
 load.load_data_customer(dimCustomer, wh_aw)
 
+#dimReseller
+dimReseller = extract.extractReseller(db_aw, wh_aw)
+dimReseller = transform.transformReseller(dimReseller)
+load.load_data_reseller(dimReseller,wh_aw)
 
 # #hecho
 # hecho_atencion = extract.extract_hehco_atencion(etl_conn)
