@@ -70,7 +70,14 @@ dimReseller = extract.extractReseller(db_aw, wh_aw)
 dimReseller = transform.transformReseller(dimReseller)
 load.load_data_reseller(dimReseller,wh_aw)
 
-# #hecho
-# hecho_atencion = extract.extract_hehco_atencion(etl_conn)
-# hecho_atencion = transform.transform_hecho_atencion(hecho_atencion)
-# load.load_hecho_atencion(hecho_atencion,etl_conn)
+
+#Hechos
+#Hecho Internet Sales
+#hechoInternetSales = extract.extractHechoInternet(wh_aw)
+#hechoInternetSales = transform.transformHechoInternet(hechoInternetSales)
+#load.load_hecho_internet(hechoInternetSales,wh_aw)
+
+#Hecho Reseller Sales
+#hechoResellerSales = extract.extractHechoReseller(wh_aw)
+#hechoResellerSales = transform.transformHechoReseller(hechoResellerSales)
+#load.load_hecho_reseller(hechoResellerSales,wh_aw)

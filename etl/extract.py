@@ -19,29 +19,30 @@ def extractProduct(con: Engine):
     """
     # Extraer datos del esquema Production
     producto_query = """
-            SELECT ProductID, Name, ProductNumber, FinishedGoodsFlag, Color, SafetyStockLevel,ReorderPoint,ListPrice, Size, DaysToManufacture, Weight, Style, ProductSubcategoryID, ProductModelID, StandardCost, WeightUnitMeasureCode, ProductLine, Class, SellStartDate, SellEndDate
-            FROM Production.Product
+        SELECT ProductID, Name, ProductNumber, FinishedGoodsFlag, Color, SafetyStockLevel,ReorderPoint,ListPrice, Size, DaysToManufacture, Weight, Style, ProductSubcategoryID, ProductModelID, StandardCost, WeightUnitMeasureCode, ProductLine, Class, SellStartDate, SellEndDate
+        FROM Production.Product
         """
     modelo_query = """
-                SELECT ProductModelID, Name
-                FROM Production.ProductModel
+        SELECT ProductModelID, Name
+        FROM Production.ProductModel
             """
-    producto= pd.read_sql_query(producto_query, con)
+    producto = pd.read_sql_query(producto_query, con)
     subcategoriaProducto = pd.read_sql_table('ProductSubcategory', con, schema='Production')
     modeloProducto = pd.read_sql_query(modelo_query, con)
 
-
-    return [ producto,subcategoriaProducto,modeloProducto ]
+    return [producto, subcategoriaProducto, modeloProducto]
 
 
 def extractPromotion(con: Engine):
     promotion = pd.read_sql_table('SpecialOffer', con, schema='Sales')
     return promotion
 
+
 def extractSubcategory(con: Engine):
     subcategoriaProducto = pd.read_sql_table('ProductSubcategory', con, schema='Production')
 
-    return  subcategoriaProducto
+    return subcategoriaProducto
+
 
 def extractCurrency(con: Engine):
     """
@@ -50,36 +51,37 @@ def extractCurrency(con: Engine):
     :return:
     """
     dimCurrency = pd.read_sql_table('Currency', con, schema='Sales')
-    #print(dimCurrency.head())
-    #dimCurrency.head()
-    #dimCurrency.info()
+    # print(dimCurrency.head())
+    # dimCurrency.head()
+    # dimCurrency.info()
     return dimCurrency
 
-def extractCustomer(con: Engine, dw:Engine):
+
+def extractCustomer(con: Engine, dw: Engine):
     # Leer las tablas excluyendo las columnas problemáticas
     customer_query = """
-            SELECT CustomerID, PersonID, AccountNumber, TerritoryID
-            FROM Sales.Customer
+        SELECT CustomerID, PersonID, AccountNumber, TerritoryID
+        FROM Sales.Customer
         """
 
     person_query = """
-                SELECT BusinessEntityID, NameStyle
-                FROM Person.Person
+        SELECT BusinessEntityID, NameStyle
+        FROM Person.Person
             """
 
     geography_query = """
-                        SELECT "GeographyKey","City" 
-                        FROM public."DimGeography"
+        SELECT "GeographyKey","City" 
+        FROM public."DimGeography"
                 """
 
     vCustomer_query = """
-                                SELECT *
-                                FROM [Sales].[vIndividualCustomer]
+        SELECT *
+        FROM [Sales].[vIndividualCustomer]
                         """
 
     vDemographics_query = """
-                                SELECT *
-                                FROM [Sales].[vPersonDemographics]
+        SELECT *
+        FROM [Sales].[vPersonDemographics]
                         """
 
     vCustomer = pd.read_sql_query(vCustomer_query, con)
@@ -89,6 +91,7 @@ def extractCustomer(con: Engine, dw:Engine):
     dimGeography = pd.read_sql_query(geography_query, dw)
 
     return [vCustomer, vDemographics, customer, person, dimGeography]
+
 
 def extractGeography(con: Engine):
     # Leer las tablas excluyendo las columnas problemáticas
@@ -116,43 +119,43 @@ def extractSalesTerritory(con: Engine):
 
     return [salesTerritory, countryRegion]
 
-def extractReseller(con: Engine, dw:Engine):
+
+def extractReseller(con: Engine, dw: Engine):
     # Leer las tablas excluyendo las columnas problemáticas
 
-
     salesPerson_query = """
-            SELECT BusinessEntityID, TerritoryID, SalesQuota
-            FROM Sales.SalesPerson
+        SELECT BusinessEntityID, TerritoryID, SalesQuota
+        FROM Sales.SalesPerson
         """
 
     vAddress_query = """
-                SELECT BusinessEntityID, Name, City, AddressLine1, AddressLine2
-                FROM [Sales].[vStoreWithAddresses]
+        SELECT BusinessEntityID, Name, City, AddressLine1, AddressLine2
+        FROM [Sales].[vStoreWithAddresses]
             """
 
     vContacts_query = """
-                SELECT BusinessEntityID, PhoneNumber
-                FROM [Sales].[vStoreWithContacts]
+        SELECT BusinessEntityID, PhoneNumber
+        FROM [Sales].[vStoreWithContacts]
             """
 
     vDemographics_query = """
-                SELECT BusinessEntityID, AnnualSales, AnnualRevenue, BankName, YearOpened, Specialty, NumberEmployees
-                FROM [Sales].[vStoreWithDemographics]
+        SELECT BusinessEntityID, AnnualSales, AnnualRevenue, BankName, YearOpened, Specialty, NumberEmployees
+        FROM [Sales].[vStoreWithDemographics]
             """
 
     geography_query = """
-                            SELECT "GeographyKey","City" 
-                            FROM public."DimGeography"
+        SELECT "GeographyKey","City" 
+        FROM public."DimGeography"
                     """
 
     customer_query = """
-                SELECT PersonID, AccountNumber
-                FROM Sales.Customer
+        SELECT PersonID, AccountNumber
+        FROM Sales.Customer
             """
 
     salesPersonQuotaHistory_query = """
-                    SELECT BusinessEntityID, QuotaDate
-                    FROM Sales.SalesPersonQuotaHistory
+        SELECT BusinessEntityID, QuotaDate
+        FROM Sales.SalesPersonQuotaHistory
                 """
 
     customer = pd.read_sql_query(customer_query, con)
@@ -166,3 +169,54 @@ def extractReseller(con: Engine, dw:Engine):
     return [customer, salesPerson, salesPersonQuotaHistory, vAddress, vContacts, vDemographics, dimGeography]
 
 
+def extractHechoInternet(dw: Engine):
+    # Leer las tablas excluyendo las columnas problemáticas
+
+    geography_query = """
+        SELECT "GeographyKey"
+        FROM public."DimGeography"
+                    """
+    reseller_query = """
+        SELECT "ResellerKey"
+        FROM public."DimReseller"
+                        """
+    currency_query = """
+        SELECT "CurrencyKeys"
+        FROM public."DimCurrency"
+                            """
+    employee_query = """
+        SELECT "EmployeeKey"
+        FROM public."DimEmployee"
+                """
+    product_query = """
+        SELECT "ProductKey"
+        FROM public."DimProduct"
+                """
+    promotion_query = """
+        SELECT "PromotionKey"
+        FROM public."DimPromotion"
+                """
+    product_subcategory_query = """
+        SELECT "ProductSubcategoryKey"
+        FROM public."DimProductSubcategory"
+                 """
+    date_query = """
+        SELECT "DateKey"
+        FROM public."DimDate"
+                 """
+    salesTerritory_query = """
+        SELECT "SalesTerritoryKey"
+        FROM public."DimSalesTerritory"
+                """
+    dimGeography = pd.read_sql_query(geography_query, dw)
+    dimReseller = pd.read_sql_query(reseller_query, dw)
+    dimCurrency = pd.read_sql_query(currency_query, dw)
+    dimEmployee = pd.read_sql_query(employee_query, dw)
+    dimProduct = pd.read_sql_query(product_query, dw)
+    dimPromotion = pd.read_sql_query(promotion_query, dw)
+    dimProductSubcategory = pd.read_sql_query(product_subcategory_query, dw)
+    dimDates = pd.read_sql_query(date_query, dw)
+    dimSalesTerritory = pd.read_sql_query(salesTerritory_query, dw)
+
+    return [dimGeography, dimReseller, dimCurrency, dimEmployee, dimProduct, dimPromotion, dimProductSubcategory,
+            dimDates, dimSalesTerritory]
