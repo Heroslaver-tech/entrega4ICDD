@@ -8,7 +8,6 @@ from googletrans import Translator
 import calendar
 from babel.dates import format_date
 
-
 import pandas as pd
 
 
@@ -37,37 +36,105 @@ def transformCurrency(dimCurrency: DataFrame) -> DataFrame:
     # Eliminar la columna modifiedDate
     dimCurrency.drop(columns=['ModifiedDate'], inplace=True)
 
+    # Ordenar el DataFrame por la columna CurrencyAlternateKey
+    dimCurrency.sort_values(by='CurrencyName', inplace=True, key=lambda col: col.str.lower())
+
+    # Reiniciar el índice del DataFrame
+    dimCurrency.reset_index(drop=True, inplace=True)
+    dimCurrency.index += 1
+
     # print(dimCurrency.head())
     return dimCurrency
 
 
 def transformCustomer(args) -> DataFrame:
-    customer, person, territory = args
-    # Renombrar columnas
-    customer.rename(columns={'AccountNumber': 'CustomerAlternateKey'}, inplace=True)
+    vCustomer, vDemographics, customer, person, dimGeography= args
 
-    # Eliminar la columna modifiedDate
-    customer.drop(columns=['ModifiedDate'], inplace=True)
-    customer.drop(columns=['rowguid'], inplace=True)
-    person.drop(columns=['ModifiedDate'], inplace=True)
-    person.drop(columns=['rowguid'], inplace=True)
-    territory.drop(columns=['ModifiedDate'], inplace=True)
-    territory.drop(columns=['rowguid'], inplace=True)
+    # Eliminar filas duplicadas
+    vCustomer.drop_duplicates(inplace=True)
+    vDemographics.drop_duplicates(inplace=True)
+    customer.drop_duplicates(inplace=True)
+    person.drop_duplicates(inplace=True)
+    dimGeography.drop_duplicates(inplace=True)
 
-    customer = customer.merge(territory, left_on='TerritoryID', right_on='TerritoryID', how='left')
-    print(customer.head())
-    print(person.head())
-    print(territory.head())
+    # Borrar Columnas innecesarias
+    vCustomer.drop(
+        columns=['AddressType', 'EmailPromotion', 'PhoneNumberType', 'StateProvinceName', 'PostalCode',
+                 'CountryRegionName', 'Demographics'], inplace=True)
+    vDemographics.drop(columns=['TotalPurchaseYTD'], inplace=True)
+
+    # Renombrar Columnas
+    vCustomer.rename(columns={'PhoneNumber': 'Phone'}, inplace=True)
+    vDemographics.rename(
+        columns={'Education': 'EnglishEducation', 'Occupation': 'EnglishOccupation', 'HomeOwnerFlag': 'HouseOwnerFlag'},
+        inplace=True)
+    customer.rename(columns={'PersonID': 'BusinessEntityID', 'AccountNumber': 'CustomerAlternateKey'}, inplace=True)
+
+    # Fusionar los DataFrames
+    vCustomer = vCustomer.merge(dimGeography, on='City', how='left')
+    vCustomer = pd.merge(vCustomer, vDemographics, on='BusinessEntityID', how='left')
+    customer = pd.merge(customer, person, on='BusinessEntityID', how='left')
+    dimCustomer = pd.merge(customer, vCustomer, on='BusinessEntityID', how='left')
+
+    # Ordenar el DataFrame por la columna CurrencyAlternateKey
+    dimCustomer.sort_values(by=['CustomerID', 'CustomerAlternateKey'], inplace=True)
+
+    # Borrar duplicados
+    dimCustomer = dimCustomer.drop_duplicates(subset=['BusinessEntityID'])
+
+    # Convertir valores booleanos en respuestas de 0 o 1
+    dimCustomer['HouseOwnerFlag'] = dimCustomer['HouseOwnerFlag'].apply(lambda x: 1 if x else (0 if pd.notna(x) else np.nan))
+    # Convertir la columna DateFirstPurchase al formato de fecha adecuado
+    dimCustomer['DateFirstPurchase'] = pd.to_datetime(dimCustomer['DateFirstPurchase'])
+    # Formatear la fecha en el formato AAAA-MM-DD
+    dimCustomer['DateFirstPurchase'] = dimCustomer['DateFirstPurchase'].dt.strftime('%Y-%m-%d')
+
+    # Reorganizar el orden de las columnas en dimCustomer
+    desired_column_order = [
+        'CustomerID', 'GeographyKey', 'CustomerAlternateKey', 'Title', 'FirstName', 'MiddleName',
+        'LastName', 'NameStyle', 'BirthDate', 'MaritalStatus', 'Suffix', 'Gender', 'EmailAddress', 'YearlyIncome',
+        'TotalChildren', 'NumberChildrenAtHome', 'EnglishEducation', 'EnglishOccupation', 'HouseOwnerFlag',
+        'NumberCarsOwned', 'AddressLine1', 'AddressLine2', 'Phone', 'DateFirstPurchase'
+    ]
+
+    # Verificar que todas las columnas deseadas están en dimCustomer
+    for column in desired_column_order:
+        if column not in dimCustomer.columns:
+            print(f"Warning: Column '{column}' not found in dimCustomer. It will be skipped in reordering.")
+
+    # Reorganizar las columnas
+    dimCustomer = dimCustomer[[col for col in desired_column_order if col in dimCustomer.columns]]
+
+    # Resetear el índice
+    dimCustomer.reset_index(drop=True, inplace=True)
+
+    # Eliminar la primera fila de dimCustomer
+    dimCustomer = dimCustomer.drop(dimCustomer.index[0])
+
+    print(dimCustomer.describe())
+    return dimCustomer
 
 
 def transformGeography(args) -> DataFrame:
     address, stateProvince, countryRegion = args
 
+    # Eliminar filas duplicadas en 'address'
+    address.drop_duplicates(inplace=True)
+
     # Eliminar la columna modifiedDate
     stateProvince.drop(columns=['ModifiedDate', 'rowguid', 'IsOnlyStateProvinceFlag'], inplace=True)
     countryRegion.drop(columns=['ModifiedDate'], inplace=True)
+
+    # Ordenar el DataFrame por la columna StateProvinceID
+    address.sort_values(by='StateProvinceID', inplace=True)
+    stateProvince.sort_values(by='StateProvinceID', inplace=True)
+
     dimGeography = address.merge(stateProvince, left_on='StateProvinceID', right_on='StateProvinceID', how='left')
+
     dimGeography.rename(columns={'Name': 'StateProvinceName', 'TerritoryID': 'SalesTerritoryKey'}, inplace=True)
+
+    dimGeography.sort_values(by='CountryRegionCode', inplace=True, key=lambda col: col.str.lower())
+    countryRegion.sort_values(by='CountryRegionCode', inplace=True, key=lambda col: col.str.lower())
     dimGeography = dimGeography.merge(countryRegion, left_on='CountryRegionCode', right_on='CountryRegionCode',
                                       how='left')
     dimGeography.rename(columns={'Name': 'EnglishCountryName'}, inplace=True)
@@ -95,6 +162,14 @@ def transformGeography(args) -> DataFrame:
     # Reorganizar las columnas
     dimGeography = dimGeography[[col for col in desired_column_order if col in dimGeography.columns]]
 
+    # Ordenar por 'CountryRegionCode' y luego por 'StateProvinceName'
+    dimGeography.sort_values(by=['CountryRegionCode', 'StateProvinceName', 'City'], inplace=True,
+                             key=lambda col: col.str.lower() if col.dtype == "object" else col)
+
+    # Reiniciar el índice del DataFrame
+    dimGeography.reset_index(drop=True, inplace=True)
+    dimGeography.index += 1
+
     return dimGeography
 
 
@@ -103,6 +178,10 @@ def transformSalesTerritory(args) -> DataFrame:
 
     salesTerritory.rename(columns={'Name': 'SalesTerritoryRegion', 'TerritoryID': 'SalesTerritoryAlternateKey',
                                    'Group': 'SalesTerritoryGroup'}, inplace=True)
+
+    # Ordenar el DataFrame por la columna CurrencyAlternateKey
+    salesTerritory.sort_values(by='CountryRegionCode', inplace=True, key=lambda col: col.str.lower())
+    countryRegion.sort_values(by='CountryRegionCode', inplace=True, key=lambda col: col.str.lower())
     dimSalesTerritory = salesTerritory.merge(countryRegion, left_on='CountryRegionCode', right_on='CountryRegionCode',
                                              how='left')
     dimSalesTerritory.drop(columns=['ModifiedDate', 'CountryRegionCode'], inplace=True)
@@ -111,13 +190,26 @@ def transformSalesTerritory(args) -> DataFrame:
         'SalesTerritoryAlternateKey', 'SalesTerritoryRegion', 'SalesTerritoryCountry', 'SalesTerritoryGroup'
     ]
 
-    # Verificar que todas las columnas deseadas están en dimGeography
     for column in desired_column_order:
         if column not in dimSalesTerritory.columns:
             print(f"Warning: Column '{column}' not found in dimSalesTerritory. It will be skipped in reordering.")
 
     # Reorganizar las columnas
     dimSalesTerritory = dimSalesTerritory[[col for col in desired_column_order if col in dimSalesTerritory.columns]]
+
+    dummy_data = pd.DataFrame({
+        'SalesTerritoryAlternateKey': [0],
+        'SalesTerritoryRegion': ['NA'],
+        'SalesTerritoryCountry': ['NA'],
+        'SalesTerritoryGroup': ['NA']
+    })
+    dimSalesTerritory.sort_values(by='SalesTerritoryAlternateKey', inplace=True)
+
+    dimSalesTerritory = pd.concat([dimSalesTerritory, dummy_data], ignore_index=True)
+
+    # Reiniciar el índice del DataFrame
+    dimSalesTerritory.reset_index(drop=True, inplace=True)
+    dimSalesTerritory.index += 1
 
     return dimSalesTerritory
 
@@ -128,14 +220,14 @@ def transformDate() -> pd.DataFrame:
     # Nueva columna FullDateAlternativeKey
     dimDate["FullDateAlternativeKey"] = dimDate["date"].dt.strftime('%Y-%m-%d')
 
-    dimDate["DayNumberOfWeek"] = dimDate['date'].dt.dayofweek
+    dimDate["DayNumberOfWeek"] = dimDate['date'].dt.dayofweek.apply(lambda x: (x + 1) % 7 + 1)
     dimDate["EnglishDayNameOfWeek"] = dimDate['date'].dt.day_name()
     dimDate["SpanishDayNameOfWeek"] = dimDate['date'].apply(lambda x: format_date(x, format='EEEE', locale='es_ES'))
     dimDate["FrenchDayNameOfWeek"] = dimDate['date'].apply(lambda x: format_date(x, format='EEEE', locale='fr_FR'))
 
     dimDate["DayNumberOfMonth"] = dimDate["date"].dt.day
     dimDate["DayNumberOfYear"] = dimDate["date"].dt.day_of_year
-    dimDate["WeekNumberOfYear"] = dimDate["date"].dt.isocalendar().week
+    dimDate["WeekNumberOfYear"] = dimDate["date"].dt.isocalendar().week.apply(lambda x: (x + 1) % 53 + 1)
     dimDate["EnglishMonthName"] = dimDate["date"].dt.month_name()
     dimDate["SpanishMonthName"] = dimDate['date'].apply(lambda x: format_date(x, format='MMMM', locale='es_ES'))
     dimDate["FrenchMonthName"] = dimDate['date'].apply(lambda x: format_date(x, format='MMMM', locale='fr_FR'))
@@ -144,7 +236,7 @@ def transformDate() -> pd.DataFrame:
     dimDate["CalendarYear"] = dimDate["date"].dt.year
     dimDate["CalendarSemester"] = dimDate["date"].dt.month.map(lambda x: 1 if x <= 6 else 2)
 
-    fiscal_start_month = 10  # Supongamos que el año fiscal empieza en octubre
+    fiscal_start_month = 1  # Supongamos que el año fiscal empieza en enero
     dimDate["FiscalQuarter"] = dimDate["date"].apply(lambda x: ((x.month - fiscal_start_month) % 12) // 3 + 1)
     dimDate["FiscalYear"] = dimDate["date"].apply(lambda x: x.year if x.month >= fiscal_start_month else x.year - 1)
     dimDate["FiscalSemester"] = dimDate["FiscalQuarter"].apply(lambda x: 1 if x in [1, 2] else 2)
@@ -152,8 +244,6 @@ def transformDate() -> pd.DataFrame:
     # Eliminar la columna 'date'
     dimDate.drop(columns=["date"], inplace=True)
     return dimDate
-
-
 
 #
 # def transform_medico(dim_medico: DataFrame) -> DataFrame:

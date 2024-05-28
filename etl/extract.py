@@ -22,12 +22,40 @@ def extractCurrency(con: Engine):
     #dimCurrency.info()
     return dimCurrency
 
-def extractCustomer(con: Engine):
-    customer = pd.read_sql_table('Customer', con, schema='Sales')
-    person = pd.read_sql_table('Person', con, schema='Person')
-    territory = pd.read_sql_table('SalesTerritory', con, schema='Sales')
+def extractCustomer(con: Engine, dw:Engine):
+    # Leer las tablas excluyendo las columnas problemáticas
+    customer_query = """
+            SELECT CustomerID, PersonID, AccountNumber, TerritoryID
+            FROM Sales.Customer
+        """
 
-    return [customer, person, territory]
+    person_query = """
+                SELECT BusinessEntityID, NameStyle
+                FROM Person.Person
+            """
+
+    geography_query = """
+                        SELECT "GeographyKey","City" 
+                        FROM public."DimGeography"
+                """
+
+    vCustomer_query = """
+                                SELECT *
+                                FROM [Sales].[vIndividualCustomer]
+                        """
+
+    vDemographics_query = """
+                                SELECT *
+                                FROM [Sales].[vPersonDemographics]
+                        """
+
+    vCustomer = pd.read_sql_query(vCustomer_query, con)
+    vDemographics = pd.read_sql_query(vDemographics_query, con)
+    customer = pd.read_sql_query(customer_query, con)
+    person = pd.read_sql_query(person_query, con)
+    dimGeography = pd.read_sql_query(geography_query, dw)
+
+    return [vCustomer, vDemographics, customer, person, dimGeography]
 
 def extractGeography(con: Engine):
     # Leer las tablas excluyendo las columnas problemáticas

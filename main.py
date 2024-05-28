@@ -32,40 +32,37 @@ inspector_wh_aw = inspect(wh_aw)
 
 tnames = inspector_wh_aw.get_table_names()
 
-#sqlscripts.yml
-# if not tnames:
-#     conn = psycopg2.connect(dbname=config_wh['dbname'], user=config_wh['user'],password=config_wh['password'],host=config_wh['host'],port=config_wh['port'])
-#     cur = conn.cursor()
-#     with open('sqlscripts.yml', 'r') as f:
-#         sql = yaml.safe_load(f)
-#         for key,val in sql.items():
-#             cur.execute(val)
-#             conn.commit()
-
-
 # extract
 # dimPromotion = extract.extractPromotion(db_aw)
-# dimCustomer = extract.extractCustomer(db_aw)
 # dimProduct = extract.extractProduct(db_aw)
 # dimSupplier = extract.extractSupplier(db_aw)
 # dimEmployee = extract.extractEmployee(db_aw)
 # dimReseller = extract.extractReseller(db_aw)
+
+
+#dimCurrency
 dimCurrency = extract.extractCurrency(db_aw)
-dimSalesTerritory = extract.extractSalesTerritory(db_aw)
-dimGeography = extract.extractGeography(db_aw)
-
-
-# transform
 dimCurrency = transform.transformCurrency(dimCurrency)
-dimDate = transform.transformDate()
-dimSalesTerritory = transform.transformSalesTerritory(dimSalesTerritory)
-dimGeography = transform.transformGeography(dimGeography)
-
-# #load#
 load.load_data_currency(dimCurrency,wh_aw)
+
+#dimDate
+dimDate = transform.transformDate()
 load.load_data_date(dimDate,wh_aw)
+
+#dimSalesTerritory
+dimSalesTerritory = extract.extractSalesTerritory(db_aw)
+dimSalesTerritory = transform.transformSalesTerritory(dimSalesTerritory)
 load.load_data_sales_territory(dimSalesTerritory,wh_aw)
+
+#dimGepraphy
+dimGeography = extract.extractGeography(db_aw)
+dimGeography = transform.transformGeography(dimGeography)
 load.load_data_geography(dimGeography, wh_aw)
+
+#dimCustomer
+dimCustomer = extract.extractCustomer(db_aw, wh_aw)
+dimCustomer = transform.transformCustomer(dimCustomer)
+load.load_data_customer(dimCustomer, wh_aw)
 
 
 # #hecho
