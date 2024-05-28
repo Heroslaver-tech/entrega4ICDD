@@ -22,12 +22,40 @@ def extractCurrency(con: Engine):
     #dimCurrency.info()
     return dimCurrency
 
-def extractCustomer(con: Engine):
-    customer = pd.read_sql_table('Customer', con, schema='Sales')
-    person = pd.read_sql_table('Person', con, schema='Person')
-    territory = pd.read_sql_table('SalesTerritory', con, schema='Sales')
+def extractCustomer(con: Engine, dw:Engine):
+    # Leer las tablas excluyendo las columnas problemáticas
+    customer_query = """
+            SELECT CustomerID, PersonID, AccountNumber, TerritoryID
+            FROM Sales.Customer
+        """
 
-    return [customer, person, territory]
+    person_query = """
+                SELECT BusinessEntityID, NameStyle
+                FROM Person.Person
+            """
+
+    geography_query = """
+                        SELECT "GeographyKey","City" 
+                        FROM public."DimGeography"
+                """
+
+    vCustomer_query = """
+                                SELECT *
+                                FROM [Sales].[vIndividualCustomer]
+                        """
+
+    vDemographics_query = """
+                                SELECT *
+                                FROM [Sales].[vPersonDemographics]
+                        """
+
+    vCustomer = pd.read_sql_query(vCustomer_query, con)
+    vDemographics = pd.read_sql_query(vDemographics_query, con)
+    customer = pd.read_sql_query(customer_query, con)
+    person = pd.read_sql_query(person_query, con)
+    dimGeography = pd.read_sql_query(geography_query, dw)
+
+    return [vCustomer, vDemographics, customer, person, dimGeography]
 
 def extractGeography(con: Engine):
     # Leer las tablas excluyendo las columnas problemáticas
@@ -54,6 +82,55 @@ def extractSalesTerritory(con: Engine):
     countryRegion = pd.read_sql_table('CountryRegion', con, schema='Person')
 
     return [salesTerritory, countryRegion]
+
+def extractReseller(con: Engine, dw:Engine):
+    # Leer las tablas excluyendo las columnas problemáticas
+
+
+    salesPerson_query = """
+            SELECT BusinessEntityID, TerritoryID, SalesQuota
+            FROM Sales.SalesPerson
+        """
+
+    vAddress_query = """
+                SELECT BusinessEntityID, Name, City, AddressLine1, AddressLine2
+                FROM [Sales].[vStoreWithAddresses]
+            """
+
+    vContacts_query = """
+                SELECT BusinessEntityID, PhoneNumber
+                FROM [Sales].[vStoreWithContacts]
+            """
+
+    vDemographics_query = """
+                SELECT BusinessEntityID, AnnualSales, AnnualRevenue, BankName, YearOpened, Specialty, NumberEmployees
+                FROM [Sales].[vStoreWithDemographics]
+            """
+
+    geography_query = """
+                            SELECT "GeographyKey","City" 
+                            FROM public."DimGeography"
+                    """
+
+    customer_query = """
+                SELECT PersonID, AccountNumber
+                FROM Sales.Customer
+            """
+
+    salesPersonQuotaHistory_query = """
+                    SELECT BusinessEntityID, QuotaDate
+                    FROM Sales.SalesPersonQuotaHistory
+                """
+
+    customer = pd.read_sql_query(customer_query, con)
+    salesPerson = pd.read_sql_query(salesPerson_query, con)
+    salesPersonQuotaHistory = pd.read_sql_query(salesPersonQuotaHistory_query, con)
+    vAddress = pd.read_sql_query(vAddress_query, con)
+    vContacts = pd.read_sql_query(vContacts_query, con)
+    vDemographics = pd.read_sql_query(vDemographics_query, con)
+    dimGeography = pd.read_sql_query(geography_query, dw)
+
+    return [customer, salesPerson, salesPersonQuotaHistory, vAddress, vContacts, vDemographics, dimGeography]
 
 
 import pandas as pd
