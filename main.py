@@ -37,8 +37,12 @@ tnames = inspector_wh_aw.get_table_names()
 # dimProduct = extract.extractProduct(db_aw)
 # dimSupplier = extract.extractSupplier(db_aw)
 # dimEmployee = extract.extractEmployee(db_aw)
-# dimReseller = extract.extractReseller(db_aw)
+#
 
+#dimReseller
+dimReseller = extract.extractReseller(db_aw, wh_aw)
+dimReseller = transform.transformReseller(dimReseller)
+load.load_data_reseller(dimReseller,wh_aw)
 
 #dimCurrency
 dimCurrency = extract.extractCurrency(db_aw)

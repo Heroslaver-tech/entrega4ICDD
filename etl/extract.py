@@ -83,6 +83,55 @@ def extractSalesTerritory(con: Engine):
 
     return [salesTerritory, countryRegion]
 
+def extractReseller(con: Engine, dw:Engine):
+    # Leer las tablas excluyendo las columnas problemáticas
+
+
+    salesPerson_query = """
+            SELECT BusinessEntityID, TerritoryID, SalesQuota
+            FROM Sales.SalesPerson
+        """
+
+    vAddress_query = """
+                SELECT BusinessEntityID, Name, City, AddressLine1, AddressLine2
+                FROM [Sales].[vStoreWithAddresses]
+            """
+
+    vContacts_query = """
+                SELECT BusinessEntityID, PhoneNumber
+                FROM [Sales].[vStoreWithContacts]
+            """
+
+    vDemographics_query = """
+                SELECT BusinessEntityID, AnnualSales, AnnualRevenue, BankName, YearOpened, Specialty, NumberEmployees
+                FROM [Sales].[vStoreWithDemographics]
+            """
+
+    geography_query = """
+                            SELECT "GeographyKey","City" 
+                            FROM public."DimGeography"
+                    """
+
+    customer_query = """
+                SELECT PersonID, AccountNumber
+                FROM Sales.Customer
+            """
+
+    salesPersonQuotaHistory_query = """
+                    SELECT BusinessEntityID, QuotaDate
+                    FROM Sales.SalesPersonQuotaHistory
+                """
+
+    customer = pd.read_sql_query(customer_query, con)
+    salesPerson = pd.read_sql_query(salesPerson_query, con)
+    salesPersonQuotaHistory = pd.read_sql_query(salesPersonQuotaHistory_query, con)
+    vAddress = pd.read_sql_query(vAddress_query, con)
+    vContacts = pd.read_sql_query(vContacts_query, con)
+    vDemographics = pd.read_sql_query(vDemographics_query, con)
+    dimGeography = pd.read_sql_query(geography_query, dw)
+
+    return [customer, salesPerson, salesPersonQuotaHistory, vAddress, vContacts, vDemographics, dimGeography]
+
 
 
 
