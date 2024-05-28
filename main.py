@@ -26,59 +26,5 @@ wh_aw = create_engine(url_wh)
 inspector_db_aw = inspect(db_aw)
 inspector_wh_aw = inspect(wh_aw)
 
-#specific_schema = 'Production'
-#table_names = inspector_db_aw.get_table_names(schema=specific_schema)
-#print(table_names)
-
 tnames = inspector_wh_aw.get_table_names()
 
-#sqlscripts.yml
-# if not tnames:
-#     conn = psycopg2.connect(dbname=config_wh['dbname'], user=config_wh['user'],password=config_wh['password'],host=config_wh['host'],port=config_wh['port'])
-#     cur = conn.cursor()
-#     with open('sqlscripts.yml', 'r') as f:
-#         sql = yaml.safe_load(f)
-#         for key,val in sql.items():
-#             cur.execute(val)
-#             conn.commit()
-
-
-# extract
-# con es el objeto de conexión SQLAlchemy
-# dimPromotion = extract.extractPromotion(db_aw)
-# dimCustomer = extract.extractCustomer(db_aw)
-# dimProduct = extract.extractProduct(db_aw)
-# dimSupplier = extract.extractSupplier(db_aw)
-# dimEmployee = extract.extractEmployee(db_aw)
-# dimReseller = extract.extractReseller(db_aw)
-dimCurrency = extract.extractCurrency(db_aw)
-dimSalesTerritory = extract.extractSalesTerritory(db_aw)
-#dimGeography = extract.extractGeography(db_aw)
-#dimProduct = extract.extractProduct(db_aw)
-#dimPromotion = extract.extractPromotion(db_aw)
-dimProducSubcategory = extract.extractSubcategory(db_aw)
-
-
-
-# transform
-dimCurrency = transform.transformCurrency(dimCurrency)
-dimDate = transform.transformDate()
-dimSalesTerritory = transform.transformSalesTerritory(dimSalesTerritory)
-#dimGeography = transform.transformGeography(dimGeography)
-#dimProduct = transform.transformProduct(dimProduct)
-#dimPromotion = transform.transformPromotion(dimPromotion)
-dimProducSubcategory = transform.transformSubCategory(dimProducSubcategory)
-
-
-# #load#
-load.load_data_currency(dimCurrency,wh_aw)
-load.load_data_date(dimDate,wh_aw)
-load.load_data_sales_territory(dimSalesTerritory,wh_aw)
-#load.load_data_geography(dimGeography, wh_aw)
-#load.load_data_product(dimProduct, wh_aw)
-
-
-# #hecho
-# hecho_atencion = extract.extract_hehco_atencion(etl_conn)
-# hecho_atencion = transform.transform_hecho_atencion(hecho_atencion)
-# load.load_hecho_atencion(hecho_atencion,etl_conn)
