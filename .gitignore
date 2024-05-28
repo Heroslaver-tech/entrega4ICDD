@@ -1,4 +1,6 @@
 .idea
+env
+my_env
 *.txt
 config.yml
 *.db
